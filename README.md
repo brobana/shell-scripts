@@ -1,4 +1,4 @@
-# get-disk-info.py
+# get_disk_info.py
 This script collects basic disk and volume data from a Linux system. It includes details about the relationships, size, and free space. The script needs to be run with `sudo` or as the **root** user.
 
 The script uses `lsblk`, `pvs`, `vgs`, `lvs`, and `df` commands.
