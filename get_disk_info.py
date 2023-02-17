@@ -41,11 +41,12 @@ def run_os_command(cmd):
 vg_list = []
 vgs_cmd_output = run_os_command(
     "vgs --units b --noheadings --options \"name,size,free\"")
-for vgs in vgs_cmd_output.splitlines():
+for line in vgs_cmd_output.splitlines():
+    vgs = line.split()
     vg = OrderedDict()
-    vg['name'] = vgs.split()[0]
-    vg['size'] = vgs.split()[1]
-    vg['free'] = vgs.split()[2]
+    vg['name'] = vgs[0]
+    vg['size'] = vgs[1]
+    vg['free'] = vgs[2]
     vg['relatedPvs'] = []  # Value will be updated during the create PV list step
     vg['relatedLvs'] = []  # Value will be updated during the create LV list step
     vg_list.append(vg)
@@ -54,81 +55,86 @@ for vgs in vgs_cmd_output.splitlines():
 lv_list = []
 lvs_cmd_output = run_os_command(
     "lvs --units b --noheadings --options \"name,size,vg_name\"")
-for lvs in lvs_cmd_output.splitlines():
+for line in lvs_cmd_output.splitlines():
+    lvs = line.split()
     lv = OrderedDict()
-    lv['name'] = lvs.split()[0]
-    lv['size'] = lvs.split()[1]
-    lv['relatedVg'] = lvs.split()[2]
+    lv['name'] = lvs[0]
+    lv['size'] = lvs[1]
+    lv['relatedVg'] = lvs[2]
     lv['relatedFs'] = ""  # Value will be updated during the create FS list step
     lv_list.append(lv)
 
     # Update the relatedLvs field of the vg_list
     for count, vg in enumerate(vg_list):
-        if lvs.split()[2] == vg['name']:
-            vg_list[count]['relatedLvs'].append(lvs.split()[0])
+        if lvs[2] == vg['name']:
+            vg_list[count]['relatedLvs'].append(lvs[0])
 
 # Create a list of filesystems
 fs_list = []
 df_cmd_out = run_os_command("df -TB1")
-for lvs in lvs_cmd_output.splitlines():
-    vg_name = lvs.split()[2]
-    lv_name = lvs.split()[0]
-    for df in df_cmd_out.splitlines():
-        s = re.search('{}-{}'.format(vg_name, lv_name), df)
+for line in lvs_cmd_output.splitlines():
+    lvs = line.split()
+    vg_name = lvs[2]
+    lv_name = lvs[0]
+    for line2 in df_cmd_out.splitlines():
+        s = re.search('{}-{}'.format(vg_name, lv_name), line2)
         if s:
+            df = line2.split()
             fs = OrderedDict()
-            fs['name'] = df.split()[0]
-            fs['mountpoint'] = df.split()[6]
-            fs['size'] = df.split()[2] + "B"
-            fs['used'] = df.split()[3] + "B"
-            fs['available'] = df.split()[4] + "B"
+            fs['name'] = df[0]
+            fs['mountpoint'] = df[6]
+            fs['size'] = df[2] + "B"
+            fs['used'] = df[3] + "B"
+            fs['available'] = df[4] + "B"
             fs['relatedLv'] = lv_name
-            fs['type'] = df.split()[1]
+            fs['type'] = df[1]
             fs_list.append(fs)
 
             # Update the relatedFs field of the lv_list
             for count, lv in enumerate(lv_list):
                 if lv_name == lv['name']:
-                    lv_list[count]['relatedFs'] = df.split()[0]
+                    lv_list[count]['relatedFs'] = df[0]
+
+# Create a list of disks
+disk_list = []
+lsblk_cmd_out = run_os_command("lsblk -lnbo \"name,size,type,pkname\"")
+for line in lsblk_cmd_out.splitlines():
+    s = re.search("disk", line)
+    if s:
+        lsblk = line.split()
+        disk = OrderedDict()
+        disk['name'] = "/dev/" + lsblk[0]
+        disk['size'] = lsblk[1] + 'B'
+        disk['relatedPvs'] = []
+        disk_list.append(disk)
 
 # Create a list of physical volumes
 pv_list = []
 pvs_cmd_out = run_os_command(
     "pvs --units b --noheadings --options \"name,size,free,vg_name\"")
-for pvs in pvs_cmd_out.splitlines():
+for line in pvs_cmd_out.splitlines():
+    pvs = line.split()
     pv = OrderedDict()
-    pv['name'] = pvs.split()[0]
-    pv['size'] = pvs.split()[1]
-    pv['free'] = pvs.split()[2]
-    pv['relatedDisk'] = ""  # Value will be updated during the create disk list step
-    pv['relatedVg'] = pvs.split()[3]
+    pv['name'] = pvs[0]
+    pv['size'] = pvs[1]
+    pv['free'] = pvs[2]
+    lsblk_cmd_out = run_os_command(
+        "lsblk -lnbo \"name,type,pkname\" {} | head -1".format(pv['name']))
+    lsblk = lsblk_cmd_out.split()
+    pv['relatedDisk'] = '/dev/' + \
+        lsblk[2] if lsblk[1] == 'part' else '/dev/' + lsblk[0]
+    pv['relatedVg'] = pvs[3]
     pv_list.append(pv)
 
     # Update the relatedPvs field of the vg_list
     for count, vg in enumerate(vg_list):
-        if pvs.split()[3] == vg['name']:
-            vg_list[count]['relatedPvs'].append(pvs.split()[0])
+        if pvs[3] == vg['name']:
+            vg_list[count]['relatedPvs'].append(pvs[0])
 
-# Create a list of disks
-disk_list = []
-lsblk_cmd_out = run_os_command("lsblk -lnbo \"name,size,type,pkname\"")
-for lsblk in lsblk_cmd_out.splitlines():
-    s = re.search("disk", lsblk)
-    if s:
-        disk = OrderedDict()
-        disk['name'] = "/dev/" + lsblk.split()[0]
-        disk['size'] = lsblk.split()[1] + 'B'
-        disk['relatedPvs'] = []
-        # Update the relatedDisk and the relatedPvs fields of the pv_list and disk_list respectively
-        for lsblk_2 in lsblk_cmd_out.splitlines():
-            if len(lsblk_2.split()) == 4 and lsblk_2.split()[3] == lsblk.split(
-            )[0]:
-                for count, pv in enumerate(pv_list):
-                    pv_name = "/dev/" + lsblk_2.split()[0]
-                    if pv_name == pv['name']:
-                        pv_list[count]['relatedDisk'] = disk['name']
-                        disk['relatedPvs'].append(pv_name)
-        disk_list.append(disk)
+    # Update the relatedPvs field of the disk_list
+    for count, disk in enumerate(disk_list):
+        if pv['relatedDisk'] == disk['name']:
+            disk_list[count]['relatedPvs'].append(pv['name'])
 
 # Put together all the lists that will be converted to JSON, then display them in the output
 try:
