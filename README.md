@@ -17,61 +17,97 @@ or
 {
     "disks": [
         {
-            "name": "/dev/sda",
-            "size": "42949672960B",
+            "name": "/dev/xvda",
+            "size": "8589934592B",
+            "relatedPvs": []
+        },
+        {
+            "name": "/dev/xvdb",
+            "size": "8589934592B",
             "relatedPvs": [
-                "/dev/sda2"
+                "/dev/sdb"
+            ]
+        },
+        {
+            "name": "/dev/xvdc",
+            "size": "8589934592B",
+            "relatedPvs": [
+                "/dev/sdc"
             ]
         }
     ],
     "physicalVolumes": [
         {
-            "name": "/dev/sda2",
-            "size": "41871736832B",
-            "free": "0B",
-            "relatedDisk": "/dev/sda",
-            "relatedVg": "cs"
+            "name": "/dev/sdb",
+            "size": "8585740288B",
+            "free": "6069157888B",
+            "relatedDisk": "/dev/xvdb",
+            "relatedVg": "tstappvg"
+        },
+        {
+            "name": "/dev/sdc",
+            "size": "8585740288B",
+            "free": "8585740288B",
+            "relatedDisk": "/dev/xvdc",
+            "relatedVg": "devappvg"
         }
     ],
     "volumeGroups": [
         {
-            "name": "cs",
-            "size": "41871736832B",
-            "free": "0B",
+            "name": "devappvg",
+            "size": "8585740288B",
+            "free": "8585740288B",
             "relatedPvs": [
-                "/dev/sda2"
+                "/dev/sdc"
+            ],
+            "relatedLvs": []
+        },
+        {
+            "name": "tstappvg",
+            "size": "8585740288B",
+            "free": "6069157888B",
+            "relatedPvs": [
+                "/dev/sdb"
             ],
             "relatedLvs": [
-                "root",
-                "swap"
+                "tstapp1_lv",
+                "tstapp2_lv"
             ]
         }
     ],
     "logicalVolumes": [
         {
-            "name": "root",
-            "size": "37576769536B",
-            "relatedVg": "cs",
-            "relatedFs": "/dev/mapper/cs-root"
+            "name": "tstapp1_lv",
+            "size": "1048576000B",
+            "relatedVg": "tstappvg",
+            "relatedFs": "/dev/mapper/tstappvg-tstapp1_lv"
         },
         {
-            "name": "swap",
-            "size": "4294967296B",
-            "relatedVg": "cs",
-            "relatedFs": ""
+            "name": "tstapp2_lv",
+            "size": "1468006400B",
+            "relatedVg": "tstappvg",
+            "relatedFs": "/dev/mapper/tstappvg-tstapp2_lv"
         }
     ],
     "filesystems": [
         {
-            "name": "/dev/mapper/cs-root",
-            "mountpoint": "/",
-            "size": "37558423552B",
-            "used": "25470230528B",
-            "available": "12088193024B",
-            "relatedLv": "root",
+            "name": "/dev/mapper/tstappvg-tstapp1_lv",
+            "mountpoint": "/tstapp1",
+            "size": "1042161664B",
+            "used": "41095168B",
+            "available": "1001066496B",
+            "relatedLv": "tstapp1_lv",
+            "type": "xfs"
+        },
+        {
+            "name": "/dev/mapper/tstappvg-tstapp2_lv",
+            "mountpoint": "/tstapp2",
+            "size": "1457520640B",
+            "used": "44003328B",
+            "available": "1413517312B",
+            "relatedLv": "tstapp2_lv",
             "type": "xfs"
         }
     ]
 }
-
 ```
